@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hls.ws.modules.mail.dao.MailAttachDao">
+    
+	<sql id="mailAttachColumns">
+		a.attach_id AS "attachId",
+		a.mail_id AS "mailId"
+	</sql>
+	
+	<sql id="mailAttachJoins">
+	</sql>
+    
+	<select id="get" resultType="MailAttach">
+		SELECT 
+			<include refid="mailAttachColumns"/>
+		FROM mail_attach a
+		<include refid="mailAttachJoins"/>
+		WHERE a.id = #{id}
+	</select>
+	
+	<select id="findList" resultType="MailAttach">
+		SELECT 
+			<include refid="mailAttachColumns"/>
+		FROM mail_attach a
+		<include refid="mailAttachJoins"/>
+		<where>
+			
+		</where>
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+			</otherwise>
+		</choose>
+	</select>
+	
+	<select id="findAllList" resultType="MailAttach">
+		SELECT 
+			<include refid="mailAttachColumns"/>
+		FROM mail_attach a
+		<include refid="mailAttachJoins"/>
+		<where>
+			
+		</where>		
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+			</otherwise>
+		</choose>
+	</select>
+	
+	<insert id="insert">
+		INSERT INTO mail_attach(
+			attach_id,
+			mail_id
+		) VALUES (
+			#{attachId},
+			#{mailId}
+		)
+	</insert>
+	
+	<update id="update">
+		UPDATE mail_attach SET 	
+			attach_id = #{attachId},
+			mail_id = #{mailId}
+		WHERE id = #{id}
+	</update>
+	
+	<update id="delete">
+		DELETE FROM mail_attach
+		WHERE id = #{id}
+	</update>
+	<!-- 邮件更新时先删除原有附件信息 -->
+	<delete id="delMa">
+	    DELETE from mail_attach
+	    where mail_id = #{mailId}
+	</delete>
+</mapper>

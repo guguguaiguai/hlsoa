@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hls.ws.modules.mail.dao.MailReceiveDao">
+    
+	<sql id="mailReceiveColumns">
+		a.id AS "id",
+		a.mail_receive AS "mailReceive.id",
+		ru.name AS "mailReceive.name",
+		a.mail_id AS "mailId.id",
+		e.mail_title AS "mailId.msgTitle",
+		a.mail_sender AS "mailSender",
+		su.name AS "mailSender.name",
+		a.mail_state AS "mailState",
+		a.read_date AS "readDate",
+		a.is_del AS "isDel"
+	</sql>
+	
+	<sql id="mailReceiveJoins">
+	    right join msg_email e on e.id=a.mail_id
+	    left join sys_user ru on ru.id=a.mail_receive
+	    left join sys_user su on su.id=a.mail_sender
+	</sql>
+    
+	<select id="get" resultType="MailReceive">
+		SELECT 
+			<include refid="mailReceiveColumns"/>
+		FROM mail_receive a
+		<include refid="mailReceiveJoins"/>
+		<where>
+		    a.is_del='0'
+		    <if test="id!='' and id!=null">
+		        and a.id = #{id}
+		    </if>
+		    <if test="mailId!=null and mailId.id!='' and mailId.id!=null">
+		        and a.msg_id=#{mailId.id}
+		    </if>
+		    <if test="mailReceive!=null and mailReceive.id!='' and mailReceiveId.id!=null">
+		        and a.mail_receive=#{mailReceive.id}
+		    </if>
+		</where>
+	</select>
+	
+	<select id="findList" resultType="MailReceive">
+		SELECT 
+			<include refid="mailReceiveColumns"/>
+		FROM mail_receive a
+		<include refid="mailReceiveJoins"/>
+		<where>
+			
+		</where>
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+			</otherwise>
+		</choose>
+	</select>
+	
+	<select id="findById" resultType="MailReceive">
+		SELECT 
+			a.mail_receive AS "recId",
+			a.mail_sender AS "senId",
+			a.mail_id AS "mid"
+		FROM mail_receive a
+		where id=#{id}
+	</select>
+	
+	<!-- 根据邮件主键查询阅读者阅读情况 -->
+	<select id="mailRead" resultType="MailReceive">
+	    SELECT 
+			<include refid="mailReceiveColumns"/>
+		FROM mail_receive a
+		<include refid="mailReceiveJoins"/>
+		<where>
+			e.del_flag='0'
+			and a.mail_id=#{mailId.id}
+		</where>
+		order by a.mail_state asc,a.read_date desc
+	</select>
+	<!-- 邮件接收者删除邮件, 不是直接删除 -->
+	<update id="delReceive">
+	    update mail_receive
+	    	set is_del=#{isDel}
+	    where mail_id=#{mailId.id}
+	    and mail_receive=#{currentUser.id}
+	    <!-- and mail_state='1' 此条件为只有已读邮件才能删除-->
+	    and is_del='0'
+	</update>
+	<!-- 删除发件箱垃圾箱邮件,记录is_draft 不是直接删除 -->
+	<update id="delLaji">
+	    update msg_email
+	    set is_draft='1'
+	    where id=#{id}
+	</update>
+	<!-- 删除收件箱垃圾箱邮件,记录is_draft 不是直接删除 -->
+	<update id="delLa">
+	    update mail_receive
+	    set is_draft='1'
+	    where id=#{id}
+	</update>
+	<!-- 批量标记阅读 -->
+	<update id="readFlag">
+	    update mail_receive
+	    	set mail_state=#{mailState},read_date=#{readDate}
+	    where mail_id=#{mailId.id}
+	    and mail_receive=#{mailReceive.id}
+	</update>
+	<!-- 根据邮件ID删除接收者信息 -->
+	<delete id="mailDel">
+	    delete from mail_receive
+	    where mail_id=#{mailId.id}
+	</delete>
+	<!-- 批量插入数据 -->
+	<insert id="insertAll" parameterType="List">
+		INSERT INTO mail_receive(
+			id,
+			mail_receive,
+			mail_id,
+			mail_sender,
+			mail_state,
+			read_date,
+			is_del
+		)
+		<foreach collection="list" item="e" separator=" UNION ALL ">
+			SELECT
+				#{e.id},
+				#{e.mailReceive.id},
+				#{e.mailId.id},
+				#{e.mailSender.id},
+				#{e.mailState},
+				#{e.readDate},
+				#{e.isDel}
+			FROM dual
+		</foreach>
+	</insert>
+	<select id="findAllList" resultType="MailReceive">
+		SELECT 
+			<include refid="mailReceiveColumns"/>
+		FROM mail_receive a
+		<include refid="mailReceiveJoins"/>
+		<where>
+			
+		</where>		
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+			</otherwise>
+		</choose>
+	</select>
+	
+	<insert id="insert">
+		INSERT INTO mail_receive(
+			id,
+			mail_receive,
+			mail_id,
+			mail_sender,
+			mail_state,
+			read_date,
+			is_del
+		) VALUES (
+			#{id},
+			#{mailReceive.id},
+			#{mailId.id},
+			#{mailSender.id},
+			#{mailState},
+			#{readDate},
+			#{isDel}
+		)
+	</insert>
+	
+	<update id="update">
+		UPDATE mail_receive SET 	
+			mail_receive = #{mailReceive.id},
+			mail_id = #{mailId.id},
+			mail_sender = #{mailSender.id},
+			mail_state = #{mailState},
+			read_date = #{readDate}
+		WHERE id = #{id}
+	</update>
+	
+	<update id="delete">
+		DELETE FROM mail_receive
+		WHERE id = #{id}
+	</update>
+	<!-- 查询当前登录者未读邮件数量 -->
+	<select id="unreadCount" resultType="Long">
+	    select count(1)
+		from msg_email a
+		left join mail_receive r on r.mail_id=a.id
+		where r.mail_state='0'
+		and r.is_del='0'
+		and a.is_send='0'
+		and r.mail_receive=#{currentUser.id}
+	</select>
+	<!-- 邮件撤回时根据邮件ID批量更新接收者信息为删除状态 -->
+	<update id="backDel">
+	    update mail_receive
+	    	set is_del=#{isDel}
+	    where mail_id=#{mailId.id}
+	    <!-- and mail_state='1' 此条件为只有已读邮件才能删除-->
+	    and is_del='0'
+	</update>
+	<!-- 是否下载过附件更新 -->
+	<update id="fdCount">
+	    update mail_receive
+	    set fd_count=1
+	    where mail_id=#{mailId.id} 
+	    and mail_receive=#{mailReceive.id}
+	</update>
+</mapper>

@@ -1,0 +1,282 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hls.ws.modules.message.dao.InternalReceiveDao">
+    
+	<sql id="internalReceiveColumns">
+		a.id AS "id",
+		a.msg_id AS "msgId.id",
+		a.send_id AS "sendId.id",
+		a.receive_id AS "receiveId.id",
+		u.name AS "receiveId.name",
+		a.read_date AS "readDate",
+		a.read_state AS "readState",
+		a.create_by AS "createBy.id",
+		a.create_date AS "createDate",
+		a.update_by AS "updateBy.id",
+		a.update_date AS "updateDate",
+		a.del_flag AS "delFlag",
+		a.remarks AS "remarks"
+	</sql>
+	<sql id="internalReceiveJoins">
+	    left join sys_user u on u.id=a.receive_id
+	</sql>
+	
+	<select id="get" resultType="InternalReceive">
+		SELECT 
+			<include refid="internalReceiveColumns"/>
+		FROM internal_receive a
+		<include refid="internalReceiveJoins"/>
+		WHERE a.id = #{id}
+	</select>
+	
+	<select id="findList" resultType="InternalReceive">
+		SELECT 
+			<include refid="internalReceiveColumns"/>
+		FROM internal_receive a
+		<include refid="internalReceiveJoins"/>
+		<where>
+			a.del_flag = #{DEL_FLAG_NORMAL}
+			<if test="msgId!=null and msgId.id!='' and msgId.id!=null">
+			    and a.msg_id=#{msgId.id}
+			</if>
+		</where>
+		<choose>
+			<otherwise>
+				ORDER BY a.update_date DESC
+			</otherwise>
+		</choose>
+	</select>
+	<!-- 根据消息主键查询接收者阅读信息 -->
+	<select id="findReceive" resultType="InternalReceive">
+	    SELECT 
+			<include refid="internalReceiveColumns"/>
+		FROM internal_receive a
+		<include refid="internalReceiveJoins"/>
+		<where>
+			 msg_id=#{msgId.id}
+		</where>
+		<choose>
+			<otherwise>
+				ORDER BY a.del_flag,a.read_state asc,a.update_date DESC
+			</otherwise>
+		</choose>
+	</select>
+	
+	<select id="findAllList" resultType="InternalReceive">
+		SELECT 
+			<include refid="internalReceiveColumns"/>
+		FROM internal_receive a
+		<include refid="internalReceiveJoins"/>
+		<where>
+			a.del_flag = #{DEL_FLAG_NORMAL}
+			<if test="msgId!=null and msgId.id!='' and msgId.id!=null">
+			    and msg_id=#{msgId.id}
+			</if>
+		</where>		
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+				ORDER BY a.update_date DESC
+			</otherwise>
+		</choose>
+	</select>
+	
+	<insert id="insert">
+		INSERT INTO internal_receive(
+			id,
+			msg_id,
+			send_id,
+			receive_id,
+			read_date,
+			read_state,
+			create_by,
+			create_date,
+			update_by,
+			update_date,
+			del_flag,
+			remarks
+		) VALUES (
+			#{id},
+			#{msgId.id},
+			#{sendId.id},
+			#{receiveId.id},
+			#{readDate},
+			#{readState},
+			#{createBy.id},
+			#{createDate},
+			#{updateBy.id},
+			#{updateDate},
+			#{delFlag},
+			#{remarks}
+		)
+	</insert>
+	<!-- 批量插入 -->
+	<insert id="insertAll" parameterType="List">
+		INSERT INTO internal_receive(
+			id,
+			msg_id,
+			send_id,
+			receive_id,
+			read_date,
+			read_state,
+			create_by,
+			create_date,
+			update_by,
+			update_date,
+			del_flag,
+			remarks
+		)
+		<foreach collection="list" item="e" separator=" UNION ALL ">
+			SELECT
+				#{e.id},
+				#{e.msgId.id},
+				#{e.sendId.id},
+				#{e.receiveId.id},
+				#{e.readDate},
+				#{e.readState},
+				#{e.createBy.id},
+				#{e.createDate},
+				#{e.updateBy.id},
+				#{e.updateDate},
+				#{e.delFlag},
+				#{e.remarks}
+			FROM dual
+		</foreach>
+	</insert>
+	
+	<update id="update">
+		update internal_receive set 	
+			msg_id = #{msgId},
+			send_id = #{sendId.id},
+			receive_id = #{receiveId.id},
+			read_date = #{readDate},
+			read_state = #{readState},
+			update_by = #{updateBy.id},
+			update_date = #{updateDate},
+			remarks = #{remarks}
+		WHERE id = #{id}
+	</update>
+		<update id="delete">
+		update internal_receive set 
+			del_flag = #{DEL_FLAG_DELETE}
+		WHERE id = #{id}
+	</update>
+	<!-- 消息撤回时，接收者信息变更为删除 -->
+	<update id="msgBack">
+	    update internal_receive set 
+			del_flag = #{DEL_FLAG_DELETE}
+		WHERE msg_id = #{msgId.id}
+	</update>
+	<!-- 接收者删除已读信息 -->
+	<update id="delMsg">
+	    update internal_receive set 
+			del_flag = #{DEL_FLAG_DELETE}
+		WHERE receive_id = #{receiveId.id}
+		and msg_id=#{msgId.id}
+	</update>
+	<!-- 查询是否已阅读 -->
+	<select id="selectRead" resultType="Long">
+	    select count(1) 
+	    from internal_receive
+	    where
+	     	msg_id=#{msgId.id} and 
+	     	receive_id=#{currentUser.id} and
+	     	read_state='1'
+	     	and del_flag='0'
+	</select>
+	<!-- 更新阅读状态,根据消息ID与接收人ID -->
+	<update id="updateState">
+	    update internal_receive set read_state='1',read_date=#{readDate}
+	    where
+	     	msg_id=#{msgId.id} and 
+	     	receive_id=#{currentUser.id} and
+	     	read_state='0'
+	</update>
+	<!-- 根据消息主键删除接收人信息 -->
+	<delete id="delReceive">
+	    DELETE FROM internal_receive
+	    where msg_id=#{msgId}
+	</delete>
+	<!-- 首页内部消息查询 -->
+	<select id="mainInternalReceive" resultType="InternalReceive">
+	    SELECT 
+			a.id AS "id",
+			a.msg_id AS "msgId.id",
+			ir.msg_content as "msgId.msgContent",
+			a.send_id AS "sendId.id",
+			su.name AS "sendId.name",
+			a.receive_id AS "receiveId.id",
+			ru.name AS "receiveId.name",
+			a.read_date AS "readDate",
+			a.read_state AS "readState",
+			a.create_by AS "createBy.id",
+			ir.create_date AS "msgId.createDate",
+			ir.update_date AS "mgsId.updateDate",
+			ir.del_flag AS "msgId.delFlag",
+			ir.remarks AS "msgId.remarks"
+		FROM internal_receive a
+		left join msg_internal ir on a.msg_id=ir.id
+		left join sys_user ru on ru.id=a.receive_id
+		left join sys_user su on su.id=a.send_id
+		<where>
+			ir.del_flag = #{DEL_FLAG_NORMAL}
+			and a.del_flag=#{DEL_FLAG_NORMAL}
+			<!-- and a.read_state='0' -->
+			and a.receive_id=#{currentUser.id} 
+			<if test="dbName == 'oracle'">
+			    and ROWNUM &lt;6
+			</if>
+		</where>		
+		ORDER BY a.read_state asc,a.update_date DESC
+		<if test="dbName == 'mysql'">
+		    limit 5
+		</if> 
+	</select>
+	<!-- 查询当前登录者未读消息 -->
+	<select id="unreadList" resultType="InternalReceive">
+		SELECT 
+			a.id AS "id",
+			a.msg_id AS "msgId.id",
+			ir.msg_content as "msgId.msgContent",
+			a.send_id AS "sendId.id",
+			su.name AS "sendId.name",
+			a.receive_id AS "receiveId.id",
+			ru.name AS "receiveId.name",
+			a.read_date AS "readDate",
+			a.read_state AS "readState",
+			a.create_by AS "createBy.id",
+			a.create_date AS "createDate",
+			a.update_by AS "updateBy.id",
+			a.update_date AS "updateDate",
+			a.del_flag AS "delFlag",
+			a.remarks AS "remarks"
+		FROM internal_receive a
+		left join msg_internal ir on a.msg_id=ir.id
+		left join sys_user ru on ru.id=a.receive_id
+		left join sys_user su on su.id=a.send_id
+		<where>
+			<!-- ir.del_flag = #{DEL_FLAG_NORMAL} -->
+			and a.del_flag=#{DEL_FLAG_NORMAL}
+			<!-- and a.read_state='0' -->
+			and a.receive_id=#{currentUser.id}
+			<if test="sendId!=null and sendId.id!='' and sendId.id!=null">
+			    and a.send_id=#{sendId.id}
+			</if>
+			<if test="msgId != null and msgId.msgContent != '' and msgId.msgContent!=null">
+				AND ir.msg_content LIKE 
+						<if test="dbName == 'oracle'">'%'||#{msgId.msgContent}||'%'</if>
+						<if test="dbName == 'mysql'">CONCAT('%', #{msgId.msgContent}, '%')</if>
+			</if>
+		</where>		
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+				ORDER BY a.read_state asc,a.update_date DESC
+			</otherwise>
+		</choose>
+	</select>
+</mapper>

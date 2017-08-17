@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lq.work.modules.oa.dao.NotifyAttachDao">
+    <sql id="mailAttachColumns">
+		a.attach_id AS "attachId",
+		a.motify_id AS "motifyId"
+	</sql>
+	
+	<sql id="mailAttachJoins">
+	</sql>
+    
+	<select id="get" resultType="NotifyAttach">
+		SELECT 
+			<include refid="mailAttachColumns"/>
+		FROM motify_attach a
+		<include refid="mailAttachJoins"/>
+		WHERE a.id = #{id}
+	</select>
+	
+	<select id="findList" resultType="NotifyAttach">
+		SELECT 
+			<include refid="mailAttachColumns"/>
+		FROM motify_attach a
+		<include refid="mailAttachJoins"/>
+		<where>
+			
+		</where>
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+			</otherwise>
+		</choose>
+	</select>
+	
+	<select id="findAllList" resultType="NotifyAttach">
+		SELECT 
+			<include refid="mailAttachColumns"/>
+		FROM motify_attach a
+		<include refid="mailAttachJoins"/>
+		<where>
+			
+		</where>		
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+			</otherwise>
+		</choose>
+	</select>
+	
+	<insert id="insert">
+		INSERT INTO motify_attach(
+			attach_id,
+			motify_id
+		) VALUES (
+			#{attachId},
+			#{motifyId}
+		)
+	</insert>
+	
+	<update id="update">
+		UPDATE motify_attach SET 	
+			attach_id = #{attachId},
+			motify_id = #{motifyId}
+		WHERE id = #{id}
+	</update>
+	
+	<update id="delete">
+		DELETE FROM motify_attach
+		WHERE id = #{id}
+	</update>
+	<!-- 公告更新时先删除原有附件信息 -->
+	<delete id="delMa">
+	    DELETE from motify_attach
+	    where MOTIFY_ID = #{motifyId}
+	</delete>
+</mapper>
