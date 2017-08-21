@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lq.work.modules.oa.dao.OaNotifyDepDao">
+    
+	<sql id="oaNotifyDepColumns">
+		a.id AS "id",
+		a.dep_id AS "depId.id",
+		a.read_flag AS "readFlag",
+		a.read_date AS "readDate",
+		a.notify_id AS "notifyId.id",
+		a.del_flag AS "delFlag",
+		o.name AS "depId.name"
+	</sql>
+	
+	<sql id="oaNotifyDepJoins">
+	    left join sys_office o on o.id=a.dep_id
+	</sql>
+    
+	<select id="get" resultType="OaNotifyDep">
+		SELECT 
+			<include refid="oaNotifyDepColumns"/>
+		FROM oa_notify_dep a
+		<include refid="oaNotifyDepJoins"/>
+		WHERE a.id = #{id}
+	</select>
+	
+	<select id="findList" resultType="OaNotifyDep">
+		SELECT 
+			<include refid="oaNotifyDepColumns"/>
+		FROM oa_notify_dep a
+		<include refid="oaNotifyDepJoins"/>
+		<where>
+			a.del_flag = #{DEL_FLAG_NORMAL}
+			<if test="notifyId!=null and notifyId.id!='' and notifyId.id!=null">
+			    and a.notify_id=#{notifyId.id}
+			</if>
+		</where>
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+			</otherwise>
+		</choose>
+	</select>
+	
+	<select id="findAllList" resultType="OaNotifyDep">
+		SELECT 
+			<include refid="oaNotifyDepColumns"/>
+		FROM oa_notify_dep a
+		<include refid="oaNotifyDepJoins"/>
+		<where>
+			a.del_flag = #{DEL_FLAG_NORMAL}
+		</where>		
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+			</otherwise>
+		</choose>
+	</select>
+	
+	<insert id="insert">
+		INSERT INTO oa_notify_dep(
+			id,
+			dep_id,
+			read_flag,
+			read_date,
+			notify_id,
+			del_flag
+		) VALUES (
+			#{id},
+			#{depId.id},
+			#{readFlag},
+			#{readDate},
+			#{notifyId.id},
+			#{delFlag}
+		)
+	</insert>
+	
+	<insert id="insertAll" parameterType="List">
+		INSERT INTO oa_notify_dep(
+			id,
+			dep_id,
+			read_flag,
+			read_date,
+			notify_id
+		)
+		<foreach collection="list" item="e" separator=" UNION ALL ">
+			SELECT
+				#{e.id},
+				#{e.depId.id},
+				#{e.readFlag},
+				#{e.readDate},
+				#{e.notifyId.id}
+			FROM dual
+		</foreach>
+	</insert>
+	
+	<update id="update">
+		UPDATE oa_notify_dep SET 	
+			dep_id = #{depId.id},
+			read_flag = #{readFlag},
+			read_date = #{readDate},
+			notify_id = #{notifyId.id}
+		WHERE id = #{id}
+	</update>
+	
+	<update id="delete">
+		UPDATE oa_notify_dep SET 
+			del_flag = #{DEL_FLAG_DELETE}
+		WHERE id = #{id}
+	</update>
+	
+	<delete id="deleteByOaNotifyId">
+		DELETE FROM OA_NOTIFY_DEP 
+		WHERE notify_id = #{oaNotifyId}
+	</delete>
+</mapper>

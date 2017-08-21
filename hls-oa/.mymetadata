@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project-module
+  type="WEB"
+  name="hls-oa"
+  id="myeclipse.1432265188351"
+  context-root="/hls-oa"
+  j2ee-spec="6.0"
+  archive="hls-oa.war">
+  <attributes>
+    <attribute name="webrootdir" value="src/main/webapp" />
+  </attributes>
+</project-module>
+

@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hls.ws.modules.message.dao.MsgInternalDao">
+    
+	<sql id="msgInternalColumns">
+		a.id AS "id",
+		a.acceptor_name AS "acceptorName",
+		a.acceptor AS "acceptor",
+		a.msg_content AS "msgContent",
+		a.msg_type AS "msgType",
+		a.back_date AS "backDate",
+		a.msg_state AS "msgState",
+		a.create_by AS "createBy.id",
+		cu.name AS "createBy.name",
+		a.create_date AS "createDate",
+		a.update_by AS "updateBy.id",
+		a.update_date AS "updateDate",
+		a.del_flag AS "delFlag",
+		a.remarks AS "remarks"
+	</sql>
+	
+	<sql id="msgInternalJoins">
+		LEFT JOIN sys_user u3 ON u3.id = a.acceptor
+		left join sys_user cu ON cu.id=a.create_by
+		left join sys_office o ON o.id=cu.office_id
+	</sql>
+    
+	<select id="get" resultType="MsgInternal">
+		SELECT 
+			<include refid="msgInternalColumns"/>
+		FROM msg_internal a
+		<include refid="msgInternalJoins"/>
+		WHERE a.id = #{id}
+	</select>
+	<select id="detail" resultType="MsgInternal">
+		SELECT 
+			<include refid="msgInternalColumns"/>
+		FROM msg_internal a
+		<include refid="msgInternalJoins"/>
+		WHERE a.id = #{id}
+		<if test="msgState!='' and msgState!=null">
+		    and msg_state=#{msgState}
+		</if>
+	</select>
+	
+	<select id="findList" resultType="MsgInternal">
+		SELECT 
+			<include refid="msgInternalColumns"/>
+		FROM msg_internal a
+		<include refid="msgInternalJoins"/>
+		<where>
+			a.del_flag = #{DEL_FLAG_NORMAL}
+			<if test="acceptor != null and acceptor != ''">
+				AND a.acceptor LIKE 
+					<if test="dbName == 'oracle'">'%'||#{acceptor}||'%'</if>
+					<if test="dbName == 'mssql'">'%'+#{acceptor}+'%'</if>
+					<if test="dbName == 'mysql'">concat('%',#{acceptor},'%')</if>
+			</if>
+			<if test="msgContent != null and msgContent != ''">
+				AND a.msg_content LIKE 
+					<if test="dbName == 'oracle'">'%'||#{msgContent}||'%'</if>
+					<if test="dbName == 'mssql'">'%'+#{msgContent}+'%'</if>
+					<if test="dbName == 'mysql'">concat('%',#{msgContent},'%')</if>
+			</if>
+			<if test="msgType != null and msgType != ''">
+				AND a.msg_type = #{msgType}
+			</if>
+			<if test="beginCreateDate != null and endCreateDate != null and beginCreateDate != '' and endCreateDate != ''">
+				AND a.create_date BETWEEN #{beginCreateDate} AND #{endCreateDate}
+			</if>
+		</where>
+		<!-- 数据范围过滤 -->
+		${sqlMap.dsf}
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+				ORDER BY a.update_date DESC
+			</otherwise>
+		</choose>
+	</select>
+	
+	<select id="findAllList" resultType="MsgInternal">
+		SELECT 
+			<include refid="msgInternalColumns"/>
+		FROM msg_internal a
+		<include refid="msgInternalJoins"/>
+		<where>
+			a.del_flag = #{DEL_FLAG_NORMAL}
+		</where>	
+		<!-- 数据范围过滤 -->
+		${sqlMap.dsf}	
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+				ORDER BY a.update_date DESC
+			</otherwise>
+		</choose>
+	</select>
+	
+	<insert id="insert">
+		INSERT INTO msg_internal(
+			id,
+			acceptor_name,
+			acceptor,
+			msg_content,
+			msg_type,
+			back_date,
+			msg_state,
+			create_by,
+			create_date,
+			update_by,
+			update_date,
+			del_flag,
+			remarks
+		) VALUES (
+			#{id},
+			#{acceptorName},
+			#{acceptor},
+			#{msgContent},
+			#{msgType},
+			#{backDate},
+			#{msgState},
+			#{createBy.id},
+			#{createDate},
+			#{updateBy.id},
+			#{updateDate},
+			#{delFlag},
+			#{remarks}
+		)
+	</insert>
+	
+	<update id="update">
+		UPDATE msg_internal SET 	
+			acceptor_name = #{acceptorName},
+			acceptor = #{acceptor},
+			msg_content = #{msgContent},
+			update_by = #{updateBy.id},
+			update_date = #{updateDate},
+			msg_state = #{msgState}
+		WHERE id = #{id}
+	</update>
+	<!-- 消息撤回 -->
+	<update id="msgBack">
+	    UPDATE msg_internal SET 
+	    	msg_state='1',back_date=#{backDate},
+	    	update_by = #{updateBy.id},
+			update_date = #{updateDate}
+	    WHERE id=#{id}
+	</update>
+	
+	<update id="delete">
+		UPDATE msg_internal SET 
+			del_flag = #{DEL_FLAG_DELETE}
+		WHERE id = #{id}
+	</update>
+	<!-- 查询当前登录者未读信息数 -->
+	<select id="msgCount" resultType="Long">
+	    select count(1)
+		from msg_internal a
+		left join internal_receive ir on ir.msg_id=a.id
+		where a.del_flag=#{DEL_FLAG_NORMAL} 
+		and ir.read_state='0'
+		and ir.del_flag=#{DEL_FLAG_NORMAL}
+		and ir.receive_id=#{currentUser.id}
+	</select>
+	<!-- 批量删除 -->
+	<update id="batch_del" parameterType="java.util.List">
+	    UPDATE msg_internal SET 
+			del_flag = '1'
+		where id in
+		<foreach collection="list" item = "model" open="(" separator="," close=")">#{ model.id}</foreach>
+	</update>
+</mapper>
